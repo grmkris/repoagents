@@ -14,6 +14,7 @@ import {
   UsageError,
 } from './errors.ts'
 import { GitLive } from './git.ts'
+import { CliLive } from './inventory/live.ts'
 
 const exitCode = (e: RepoAgentsError): number =>
   Match.value(e).pipe(
@@ -38,7 +39,7 @@ const message = (e: RepoAgentsError): string | undefined =>
     }),
   )
 
-const layer = GitLive.pipe(Layer.provideMerge(BunServices.layer))
+const layer = Layer.mergeAll(GitLive, CliLive).pipe(Layer.provideMerge(BunServices.layer))
 
 const isOwn = (e: unknown): e is RepoAgentsError =>
   e instanceof IssuesFound ||

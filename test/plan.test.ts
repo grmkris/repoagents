@@ -5,7 +5,8 @@ import { Effect } from 'effect'
 import { apply, plan } from '../src/plan.ts'
 import { fixture, TestLayer } from './helpers.ts'
 
-const opts = { force: false, version: '0.0.0' }
+const opts = { force: false, version: '0.0.0', isolate: false }
+const server = (url: string) => ({ type: 'http', url })
 
 describe('plan / apply', () => {
   it.effect('creates CLAUDE.md and skill links and generated MCP files; then nothing is left', () =>
@@ -74,5 +75,43 @@ describe('plan / apply', () => {
       )
       expect((yield* plan(root, opts)).issues.some((i) => i.problem.includes('inline secret'))).toBe(true)
     }).pipe(Effect.provide(TestLayer)),
+  )
+  it.effect('a newer repoagents version is not drift', () =>
+    Effect.gen(function* () {
+      const root = fixture({
+        '.mcp.json': JSON.stringify({ mcpServers: { myplan: { type: 'http', url: 'https://myplan.lol/mcp' } } }),
+      })
+      yield* apply(root, (yield* plan(root, opts)).actions)
+      expect((yield* plan(root, { ...opts, version: '9.9.9' })).actions).toEqual([])
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it.effect(
+    '--isolate writes Claude allowedMcpServers and .grok/config.toml, keeps other keys, then maintains them',
+    () =>
+      Effect.gen(function* () {
+        const root = fixture({
+          '.mcp.json': JSON.stringify({ mcpServers: { myplan: server('https://myplan.lol/mcp') } }),
+          '.claude/settings.json': JSON.stringify({ permissions: { deny: ['Bash(rm:*)'] } }),
+        })
+        yield* apply(root, (yield* plan(root, { ...opts, isolate: true })).actions)
+        const settings: unknown = JSON.parse(readFileSync(join(root, '.claude/settings.json'), 'utf8'))
+        expect(settings).toEqual({
+          permissions: { deny: ['Bash(rm:*)'] },
+          allowedMcpServers: [{ serverUrl: 'https://myplan.lol/mcp' }],
+          disableClaudeAiConnectors: true,
+        })
+        expect(readFileSync(join(root, '.grok/config.toml'), 'utf8')).toContain('url = "https://myplan.lol/mcp"')
+        expect((yield* plan(root, opts)).actions).toEqual([])
+        // A new server in .mcp.json: plain sync keeps both isolation files in step.
+        writeFileSync(
+          join(root, '.mcp.json'),
+          JSON.stringify({
+            mcpServers: { myplan: server('https://myplan.lol/mcp'), mytab: server('https://mytab.lol/mcp') },
+          }),
+        )
+        const files = (yield* plan(root, opts)).actions.map((a) => a.file).toSorted()
+        expect(files).toEqual(['.claude/settings.json', '.codex/config.toml', '.cursor/mcp.json', '.grok/config.toml'])
+      }).pipe(Effect.provide(TestLayer)),
   )
 })

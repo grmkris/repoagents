@@ -1,13 +1,16 @@
 // The command tree. Handlers stay thin: resolve the shared flags, call the module, print.
-import { Effect, Option, Path } from 'effect'
+import { Config, Console, Effect, Option, Path } from 'effect'
 import { Argument, Command, Flag } from 'effect/cli'
 import pkg from '../package.json' with { type: 'json' }
 import { skillsAudit } from './audit.ts'
 import { doctor } from './doctor.ts'
+import { HARNESSES } from './harnesses.ts'
+import { leftovers } from './inventory/merge.ts'
 import { UsageError } from './errors.ts'
 import { json, reportIssues, say } from './output.ts'
 import { apply, describeAction, plan } from './plan.ts'
 import { skillsAdd, skillsFanout, skillsRehash, skillsUpdate, skillsVerify } from './skills.ts'
+import { inventory, renderStatus } from './status.ts'
 
 export const VERSION = pkg.version
 
@@ -27,31 +30,99 @@ const resolveRoot = (cwd: Option.Option<string>) =>
     return path.resolve(Option.getOrElse(cwd, () => '.'))
   })
 
-const sync = (flags: { cwd: Option.Option<string>; force: boolean; json: boolean; quiet: boolean }, check: boolean) =>
+interface SyncFlags {
+  readonly cwd: Option.Option<string>
+  readonly force: boolean
+  readonly json: boolean
+  readonly quiet: boolean
+  readonly isolate?: boolean
+  readonly strict?: boolean
+  readonly allow?: readonly string[]
+}
+
+/** check --strict: machine-level config a harness loads here, and repository entries something else overrides. */
+const strictIssues = (root: string, allowFlags: readonly string[]) =>
+  Effect.gen(function* () {
+    const fromEnv = yield* Config.String('REPOAGENTS_ALLOW').pipe(Config.withDefault(''))
+    const allow = new Set([...allowFlags, ...fromEnv.split(',').map((a) => a.trim())].filter((a) => a !== ''))
+    const inv = yield* inventory(root, { live: false })
+    return [
+      ...leftovers(inv.items, allow).map((m) => ({
+        file: m.path,
+        problem: `machine-level ${m.kind} ${m.name} loads in ${m.harnesses.join(', ')} (--allow ${m.name} to accept)`,
+      })),
+      ...inv.warnings.filter((w) => w.level === 'warn').map((w) => ({ file: 'machine', problem: w.message })),
+    ]
+  })
+
+const sync = (flags: SyncFlags, check: boolean) =>
   Effect.gen(function* () {
     const root = yield* resolveRoot(flags.cwd)
-    const planned = yield* plan(root, { force: flags.force, version: VERSION })
+    const isolate = flags.isolate === true
+    const planned = yield* plan(root, { force: flags.force, version: VERSION, isolate })
     const issues = [...planned.issues, ...(yield* skillsVerify(root))]
     if (check) {
       const drift = planned.actions.map((a) => ({ file: a.file, problem: `drift: ${describeAction(a)}` }))
-      yield* json(flags, { ok: issues.length + drift.length === 0, issues: [...issues, ...drift] })
-      yield* reportIssues(flags, [...issues, ...drift])
+      const strict = flags.strict === true ? yield* strictIssues(root, flags.allow ?? []) : []
+      const all = [...issues, ...drift, ...strict]
+      yield* json(flags, { ok: all.length === 0, issues: all })
+      yield* reportIssues(flags, all)
       return yield* say(flags, 'repoagents: ok')
     }
     yield* apply(root, planned.actions)
     for (const a of planned.actions) yield* say(flags, `✓ ${describeAction(a)}`)
     yield* json(flags, { actions: planned.actions.map(describeAction), issues })
     if (planned.actions.length === 0 && issues.length === 0) yield* say(flags, 'repoagents: up to date')
+    if (isolate) for (const h of HARNESSES) yield* say(flags, `· ${h.name}: ${h.isolation}`)
     yield* reportIssues(flags, issues)
   })
 
-const root = Command.make('repoagents', shared, (flags) => sync(flags, false)).pipe(
-  Command.withDescription("Keep one repository's agent config consistent for Claude Code, Codex, Grok and Cursor"),
-)
+const root = Command.make(
+  'repoagents',
+  {
+    ...shared,
+    isolate: Flag.Boolean('isolate').pipe(
+      Flag.withDescription('also write repo-level isolation: Claude allowedMcpServers, .grok/config.toml'),
+      Flag.withDefault(false),
+    ),
+  },
+  (flags) => sync(flags, false),
+).pipe(Command.withDescription("Keep one repository's agent config consistent for Claude Code, Codex, Grok and Cursor"))
 
-const checkCmd = Command.make('check', shared, (flags) => sync(flags, true)).pipe(
-  Command.withDescription('Fail on drift: links, generated MCP files, vendored skills (for CI and pre-commit)'),
-)
+const checkCmd = Command.make(
+  'check',
+  {
+    ...shared,
+    strict: Flag.Boolean('strict').pipe(
+      Flag.withDescription('also fail on machine-level MCP servers, skills and plugins that load here (local use)'),
+      Flag.withDefault(false),
+    ),
+    allow: Flag.String('allow').pipe(
+      Flag.withDescription('accept a machine-level item by name (repeatable; or REPOAGENTS_ALLOW=a,b)'),
+      Flag.atLeast(0),
+    ),
+  },
+  (flags) => sync(flags, true),
+).pipe(Command.withDescription('Fail on drift: links, generated MCP files, vendored skills (for CI and pre-commit)'))
+
+const statusCmd = Command.make(
+  'status',
+  {
+    ...shared,
+    live: Flag.Boolean('live').pipe(
+      Flag.withDescription('also ask the harnesses (grok inspect, codex mcp list)'),
+      Flag.withDefault(false),
+    ),
+  },
+  (flags) =>
+    Effect.gen(function* () {
+      const result = yield* inventory(yield* resolveRoot(flags.cwd), { live: flags.live })
+      yield* json(flags, result)
+      if (!flags.quiet) for (const line of renderStatus(result)) yield* say(flags, line)
+      if (!flags.json)
+        for (const w of result.warnings) yield* Console.error(`${w.level === 'warn' ? '!' : '·'} ${w.message}`)
+    }),
+).pipe(Command.withDescription('What each harness loads here and from where: MCP servers, skills, plugins'))
 
 const doctorCmd = Command.make('doctor', shared, (flags) =>
   Effect.gen(function* () {
@@ -175,4 +246,4 @@ const skillsCmd = Command.make('skills').pipe(
   Command.withSubcommands([addCmd, rehashCmd, verifyCmd, updateCmd, fanoutCmd, auditCmd]),
 )
 
-export const app = root.pipe(Command.withSubcommands([checkCmd, doctorCmd, skillsCmd]))
+export const app = root.pipe(Command.withSubcommands([checkCmd, statusCmd, doctorCmd, skillsCmd]))

@@ -6,6 +6,7 @@ with provenance — committed in the repository, checked in CI, nothing installe
 ```sh
 bunx repoagents          # create/repair links, regenerate MCP files
 bunx repoagents check    # fail on drift (CI, pre-commit)
+bunx repoagents status   # what each harness really loads here, and from where
 bunx repoagents doctor   # explain what each harness loads here
 ```
 
@@ -100,6 +101,22 @@ repoagents skills audit                                          # prompt inject
 Licenses are found next to the skill, or in the nearest ancestor directory (plugin repos keep `LICENSE` beside the
 plugin), and recorded as SPDX ids.
 
+## What a repository can and cannot switch off
+
+The repository adds config; every harness still merges the user's own on top. What `status` shows and `--isolate`
+writes, verified 2026-10-10 with temporary home directories:
+
+| Harness      | MCP precedence (first wins)                                                                       | Repo-level control (`--isolate`)                                                                                                           | Left over                                                                                                   |
+| ------------ | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Claude Code  | `~/.claude.json` entry for this path > `.mcp.json` > user                                         | `allowedMcpServers` (by URL / exact command) + `disableClaudeAiConnectors` in `.claude/settings.json` block user, local and plugin servers | user skills and plugins; a user-scope allowlist can widen it                                                |
+| Codex        | `.codex/config.toml` > `~/.codex/config.toml`                                                     | repo entries replace same-named user ones (already the case)                                                                               | other user servers and skills; `CODEX_HOME=<dir>` for a clean run                                           |
+| Grok         | `.grok/config.toml` > `~/.grok/config.toml` > `~/.claude.json` > `.cursor/mcp.json` > `.mcp.json` | generated `.grok/config.toml` beats the user's config                                                                                      | servers imported from `~/.claude.json`/`~/.cursor`; `GROK_CLAUDE_MCPS_ENABLED=0 GROK_CURSOR_MCPS_ENABLED=0` |
+| Cursor agent | `.cursor/mcp.json`, `~/.cursor/mcp.json`                                                          | none                                                                                                                                       | user servers                                                                                                |
+
+Without `--isolate`, a user's Grok server named like a repository server silently wins, and a machine-local Claude
+entry for the project path shadows `.mcp.json`; `status` marks both with `!`. Grok 1.0.46 reports servers from the
+project `.cursor/mcp.json` as coming from `~/.cursor/mcp.json`; repoagents accounts for that.
+
 ## Install
 
 |                          |                                                                                                                                                                                                                        |
@@ -114,6 +131,9 @@ plugin), and recorded as SPDX ids.
 | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `repoagents`                                                             | Create/repair `CLAUDE.md` and skill links, regenerate MCP files, verify skills                                                                                                                                        |
 | `repoagents check`                                                       | Same checks, change nothing, exit 1 on any drift or issue                                                                                                                                                             |
+| `repoagents status [--live]`                                             | MCP and skills matrix per harness: repo, user, local, imported (`compat`) or bundled; overridden repo entries; machine-level leftovers. `--live` also asks Grok (`inspect --json`) and Codex (`mcp list --json`)      |
+| `repoagents check --strict [--allow name…]`                              | Also fail on machine-level MCP servers, skills and plugins that load here (local use; `REPOAGENTS_ALLOW=a,b` works too). Plain `check` stays machine-independent for CI                                               |
+| `repoagents --isolate`                                                   | Also write the repo-level isolation settings (see below); afterwards plain `repoagents` keeps them in step with `.mcp.json`                                                                                           |
 | `repoagents doctor`                                                      | Per harness: where instructions come from (direct, fallback, through the symlink, or shadowed), skills it may load twice, MCP env vars that are not set (names only), machine-level skills that should live in a repo |
 | `repoagents skills add <owner/repo> <path> [--ref] [--name] [--license]` | Vendor a skill (`.` for a repo whose root is the skill)                                                                                                                                                               |
 | `repoagents skills rehash <name> [why]`                                  | Record local edits                                                                                                                                                                                                    |
@@ -155,6 +175,8 @@ and an honest record of which upstream skill you copied and how you changed it.
 
 ## Limitations
 
+- `status` reads config files; `--live` cross-checks Grok and Codex only (Claude and Cursor print text with slow
+  health checks). Skill precedence between directories is not verified, so `status` lists every copy.
 - Four harnesses, each verified on the version in the table; behaviour changes upstream (it moves fast) and the
   table is updated when re-verified. Cursor's handling of a skill present in both `.agents/skills` and
   `.claude/skills` is not verified yet (`doctor` mentions it).

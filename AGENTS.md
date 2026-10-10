@@ -12,7 +12,10 @@ repoagents keeps one repository's agent config consistent for Claude Code, Codex
   stability boundary), `@effect/platform-bun` in `src/main.ts`, `@effect/platform-node` in tests (Vitest runs on Node).
 - Modules: `cli.ts` (command tree, thin handlers), `plan.ts` (sync/check), `render.ts` (pure MCP renderers),
   `skills.ts` + `sources.ts` (vendored skills, sources.json v2), `doctor.ts`, `audit.ts`, `git.ts` (Git service),
-  `harnesses.ts` (what each harness reads — update it with the version you verified).
+  `harnesses.ts` (what each harness reads — update it with the version you verified), `inventory/` (probes read
+  repo + home config, `merge.ts` resolves precedence purely, `live.ts` asks harnesses), `status.ts`, `toml.ts`.
+- Re-verify precedence with temporary home directories (never a real one) before changing ranks in
+  `inventory/probes.ts`.
 
 ## Rules
 

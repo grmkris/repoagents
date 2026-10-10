@@ -1,6 +1,6 @@
 {
   "name": "repoagents",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "Repo-only agent config for Claude Code, Codex, Grok and Cursor: one AGENTS.md, vendored skills with provenance, one MCP list.",
   "keywords": [
     "agents",

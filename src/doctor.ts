@@ -1,11 +1,13 @@
 // `repoagents doctor`: where each harness gets its instructions, skills and MCP servers in this repository, skills a
 // harness may load twice, MCP env vars that are not set (names only), and machine-level config that should live in
-// a repository instead.
+// a repository instead (see `repoagents status` for the full picture).
 import { Config, Effect, Option, Path, Schema } from 'effect'
 import { HARNESSES, type Harness } from './harnesses.ts'
 import { exists, linkTarget, listDir, readTextOption } from './fsx.ts'
 import { CLAUDE_SKILLS_DIR, SKILLS_DIR, skillNames } from './repo.ts'
+import { leftovers } from './inventory/merge.ts'
 import { McpFile } from './schema.ts'
+import { inventory } from './status.ts'
 
 interface Finding {
   readonly level: 'ok' | 'info' | 'warn'
@@ -93,25 +95,27 @@ const mcpFindings = (root: string) =>
     return out
   })
 
-const MACHINE_DIRS: ReadonlyArray<readonly [string, ReadonlySet<string>]> = [
-  ['.claude/skills', new Set(['synced'])],
-  ['.agents/skills', new Set()],
-  ['.codex/skills', new Set(['.system'])],
-  ['.grok/skills', new Set()],
-  ['.gemini/skills', new Set()],
-]
-
-const machineFindings = Effect.gen(function* () {
-  const path = yield* Path.Path
-  const home = yield* Config.String('HOME').pipe(Config.withDefault(''))
-  if (home === '') return []
-  const leftovers: string[] = []
-  for (const [dir, keep] of MACHINE_DIRS)
-    for (const name of yield* listDir(path.join(home, dir))) if (!keep.has(name)) leftovers.push(`~/${dir}/${name}`)
-  return leftovers.length === 0
-    ? [{ level: 'ok', topic: 'machine', message: 'no machine-level skills' } satisfies Finding]
-    : leftovers.map((l): Finding => ({ level: 'info', topic: 'machine', message: `machine-level skill: ${l}` }))
-}).pipe(Effect.orElseSucceed((): Finding[] => []))
+const machineFindings = (root: string) =>
+  Effect.gen(function* () {
+    const inv = yield* inventory(root, { live: false })
+    const rows = leftovers(inv.items, new Set())
+    return [
+      ...inv.warnings.map((w): Finding => ({ level: w.level, topic: 'machine', message: w.message })),
+      ...(rows.length === 0
+        ? [
+            {
+              level: 'ok',
+              topic: 'machine',
+              message: 'no machine-level MCP servers, skills or plugins load here',
+            } satisfies Finding,
+          ]
+        : rows.map((r): Finding => ({
+            level: 'info',
+            topic: 'machine',
+            message: `machine-level ${r.kind} ${r.name}: ${r.path} (${r.harnesses.join(', ')})`,
+          }))),
+    ]
+  })
 
 export const doctor = (root: string) =>
   Effect.gen(function* () {
@@ -119,6 +123,6 @@ export const doctor = (root: string) =>
       ...(yield* instructionFindings(root)),
       ...(yield* skillFindings(root)),
       ...(yield* mcpFindings(root)),
-      ...(yield* machineFindings),
+      ...(yield* machineFindings(root)),
     ]
   })

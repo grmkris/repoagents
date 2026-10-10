@@ -6,8 +6,9 @@ import { dirname, join } from 'node:path'
 import { NodeServices } from '@effect/platform-node'
 import { Layer } from 'effect'
 import { GitLive } from '../src/git.ts'
+import { CliLive } from '../src/inventory/live.ts'
 
-export const TestLayer = GitLive.pipe(Layer.provideMerge(NodeServices.layer))
+export const TestLayer = Layer.mergeAll(GitLive, CliLive).pipe(Layer.provideMerge(NodeServices.layer))
 
 export const fixture = (files: Readonly<Record<string, string>>): string => {
   const root = mkdtempSync(join(tmpdir(), 'repoagents-'))
