@@ -57,9 +57,9 @@ const skillFindings = (root: string) =>
       const twice = seen.length - new Set(seen).size
       return twice > 0 && !h.dedupesSkills
         ? {
-            level: 'warn',
+            level: 'info',
             topic: h.name,
-            message: `${new Set(seen).size} skills; may list ${twice} twice (reads ${h.skillDirs.join(' + ')})`,
+            message: `${new Set(seen).size} skills; may list ${twice} twice (reads ${h.skillDirs.join(' + ')}; unverified)`,
           }
         : { level: 'ok', topic: h.name, message: `${new Set(seen).size} skills from ${h.skillDirs.join(' + ')}` }
     })

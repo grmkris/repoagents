@@ -13,7 +13,7 @@ describe('doctor', () => {
       symlinkSync('../../.agents/skills/x', join(root, '.claude/skills/x'))
       const findings = yield* doctor(root)
       expect(findings.find((f) => f.topic === 'Grok')?.message).toContain('shadowed')
-      expect(findings.some((f) => f.topic === 'Cursor agent' && f.message.includes('twice'))).toBe(true)
+      expect(findings.some((f) => f.topic === 'Cursor agent' && f.level === 'info' && f.message.includes('unverified'))).toBe(true)
       expect(findings.find((f) => f.topic === 'Codex')?.message).toBe('reads AGENTS.md')
     }).pipe(Effect.provide(TestLayer)),
   )
