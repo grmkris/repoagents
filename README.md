@@ -105,7 +105,7 @@ plugin), and recorded as SPDX ids.
 |                                      |                                                                                                                                                                                                                        |
 | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Ad hoc                               | `bunx repoagents`                                                                                                                                                                                                      |
-| Pinned in a repo with `package.json` | `bun add -d repoagents`, then `"agents:check": "repoagents check"` (the lockfile pins the version)                                                                                                                     |
+| In a repo's scripts / CI | `"agents:check": "bunx repoagents@1 check"` — pins the major version, no dependency or lockfile entry |
 | Without Bun                          | `curl -fsSL https://raw.githubusercontent.com/grmkris/repoagents/main/install.sh \| sh` — single executable with the Bun runtime inside (linux x64/arm64 incl. musl, macOS x64/arm64, Windows x64; checksums verified) |
 
 ## Commands
