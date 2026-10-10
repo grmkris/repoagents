@@ -9,9 +9,6 @@ jobs:
   release:
     # macOS: darwin binaries need an ad-hoc codesign after `bun build --compile`; linux/windows cross-compile here too.
     runs-on: macos-latest
-    env:
-      # npm publish is skipped until the NPM_TOKEN secret exists (step-level env is not visible to the step's if).
-      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -26,10 +23,12 @@ jobs:
             dist/bin/*
             install.sh
           generate_release_notes: true
+      # npm trusted publishing (OIDC, id-token: write above): no token; provenance is generated automatically.
+      # Needs npm >= 11.5.1 and Node >= 22.14, and the trusted publisher configured on npmjs.com for release.yml.
       - uses: actions/setup-node@v4
-        if: ${{ env.NODE_AUTH_TOKEN != '' }}
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://registry.npmjs.org
-      - run: npm publish --provenance --access public
-        if: ${{ env.NODE_AUTH_TOKEN != '' }}
+          package-manager-cache: false
+      - run: npm install -g npm@latest
+      - run: npm publish --access public

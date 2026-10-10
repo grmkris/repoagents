@@ -40,7 +40,8 @@
     "build": "bun build src/main.ts --target bun --minify --outfile dist/repoagents.js",
     "build:bin": "bun scripts/build-binaries.ts",
     "agents:check": "bun src/main.ts check",
-    "check": "bun run fmt:check && bun run lint && bun run typecheck && bun run effect:check && bun run knip && bun run test && bun run build && bun run agents:check"
+    "check": "bun run fmt:check && bun run lint && bun run typecheck && bun run effect:check && bun run knip && bun run test && bun run build && bun run agents:check",
+    "prepublishOnly": "bun run build"
   },
   "devDependencies": {
     "@effect/platform-bun": "4.0.1",
