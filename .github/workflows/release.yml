@@ -24,9 +24,14 @@ jobs:
             install.sh
           generate_release_notes: true
       - uses: actions/setup-node@v4
+        if: ${{ env.NODE_AUTH_TOKEN != '' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
+      # Skipped until the NPM_TOKEN secret exists.
       - run: npm publish --provenance --access public
+        if: ${{ env.NODE_AUTH_TOKEN != '' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
