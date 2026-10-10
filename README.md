@@ -102,11 +102,11 @@ plugin), and recorded as SPDX ids.
 
 ## Install
 
-|                                      |                                                                                                                                                                                                                        |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Ad hoc                               | `bunx repoagents`                                                                                                                                                                                                      |
-| In a repo's scripts / CI | `"agents:check": "bunx repoagents@1 check"` — pins the major version, no dependency or lockfile entry |
-| Without Bun                          | `curl -fsSL https://raw.githubusercontent.com/grmkris/repoagents/main/install.sh \| sh` — single executable with the Bun runtime inside (linux x64/arm64 incl. musl, macOS x64/arm64, Windows x64; checksums verified) |
+|                          |                                                                                                                                                                                                                        |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ad hoc                   | `bunx repoagents`                                                                                                                                                                                                      |
+| In a repo's scripts / CI | `"agents:check": "bunx repoagents@1 check"` — pins the major version, no dependency or lockfile entry                                                                                                                  |
+| Without Bun              | `curl -fsSL https://raw.githubusercontent.com/grmkris/repoagents/main/install.sh \| sh` — single executable with the Bun runtime inside (linux x64/arm64 incl. musl, macOS x64/arm64, Windows x64; checksums verified) |
 
 ## Commands
 
