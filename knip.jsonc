@@ -1,0 +1,7 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["scripts/*.ts", "test/**/*.test.ts"],
+  "project": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"],
+  // The tsconfig plugin name @effect/tsgo reads its options under, not an npm package.
+  "ignoreDependencies": ["@effect/language-service"],
+}

@@ -1,0 +1,71 @@
+{
+  "version": 2,
+  "skills": {
+    "effect-ts": {
+      "repository": "Effect-TS/skills",
+      "commit": "155c50c911f9c99c294ef8a4461981c5bbe6453e",
+      "path": "skills/effect-ts",
+      "licenses": [
+        "LICENSE"
+      ],
+      "license": "MIT",
+      "treeSha256": "c82b34704b6905b2ed8a93484a519eb57c86f51858ed8648046463f07386a1ee",
+      "localTreeSha256": "c82b34704b6905b2ed8a93484a519eb57c86f51858ed8648046463f07386a1ee",
+      "unchanged": true
+    },
+    "grilling": {
+      "repository": "mattpocock/skills",
+      "commit": "49dd158d1076134a641b33efb035946536778336",
+      "path": "skills/productivity/grilling",
+      "license": "MIT",
+      "licenses": [
+        "LICENSE"
+      ],
+      "treeSha256": "714b8c4d1544298615f0647b237e7ea13c6940c302417c51571ca77ba5161dad",
+      "localTreeSha256": "714b8c4d1544298615f0647b237e7ea13c6940c302417c51571ca77ba5161dad",
+      "unchanged": true
+    },
+    "thermo-nuclear-code-quality-review": {
+      "repository": "cursor/plugins",
+      "commit": "ccb5507cec1546dc88135c1139c811e6c59115ba",
+      "path": "thermos/skills/thermo-nuclear-code-quality-review",
+      "license": "MIT",
+      "licenses": [
+        "LICENSE"
+      ],
+      "treeSha256": "b92ba8ebcf36f421a22a6af2972325d4e8b56ee397ca7de6734f84806050dbb4",
+      "localTreeSha256": "dce8793eba43c2e18caa103e747f44205d41462c0a9e5eac469dbab277dedd11",
+      "unchanged": false,
+      "adaptation": "agents/openai.yaml added so Codex also treats it as manual-only.",
+      "baseCommit": "ccb5507cec1546dc88135c1139c811e6c59115ba"
+    },
+    "thermo-nuclear-review": {
+      "repository": "cursor/plugins",
+      "commit": "ccb5507cec1546dc88135c1139c811e6c59115ba",
+      "path": "thermos/skills/thermo-nuclear-review",
+      "license": "MIT",
+      "licenses": [
+        "LICENSE"
+      ],
+      "treeSha256": "6555687f1bffa96a3cd813aa7e94707d4aec98465c1184c3d12fbfd034bfc3f0",
+      "localTreeSha256": "6e28f1a80f415ec4c2db5942d1331343f796e48300f3bd64c1c66cac12a0d694",
+      "unchanged": false,
+      "adaptation": "agents/openai.yaml added so Codex also treats it as manual-only.",
+      "baseCommit": "ccb5507cec1546dc88135c1139c811e6c59115ba"
+    },
+    "unslop": {
+      "repository": "cursor/plugins",
+      "commit": "ccb5507cec1546dc88135c1139c811e6c59115ba",
+      "path": "pstack/skills/unslop",
+      "license": "MIT",
+      "licenses": [
+        "LICENSE"
+      ],
+      "treeSha256": "8ccc1d0bebf98bb77486238ca07d7dc7fba9b467aef3ad49477aa64cbcef89aa",
+      "localTreeSha256": "a3acfd72b95b3dce0feb5cfde79797526ece9270f46bdcfac1139f8ed74b704e",
+      "unchanged": false,
+      "adaptation": "Description scoped to prose; upstream 'Must always apply' contradicts its manual-only flag (cursor/plugins#308, #367). agents/openai.yaml added so Codex also treats it as manual-only.",
+      "baseCommit": "ccb5507cec1546dc88135c1139c811e6c59115ba"
+    }
+  }
+}

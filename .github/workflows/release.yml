@@ -1,0 +1,32 @@
+name: release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+  id-token: write
+jobs:
+  release:
+    # macOS: darwin binaries need an ad-hoc codesign after `bun build --compile`; linux/windows cross-compile here too.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+      - run: bun run build:bin
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/bin/*
+            install.sh
+          generate_release_notes: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

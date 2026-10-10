@@ -1,0 +1,92 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ESNext"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": true,
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "singleThreaded": true,
+    "types": ["bun"],
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "diagnosticSeverity": {
+          "missingEffectServiceDependency": "error",
+          "leakingRequirements": "error",
+          "unknownInEffectCatch": "error",
+          "tryCatchInEffectGen": "error",
+          "globalErrorInEffectFailure": "error",
+          "globalErrorInEffectCatch": "error",
+          "schemaSyncInEffect": "error",
+          "outdatedApi": "error",
+          "duplicatePackage": "error",
+          "effectFnIife": "error",
+          "effectGenUsesAdapter": "error",
+          "effectInFailure": "error",
+          "effectInVoidSuccess": "error",
+          "genericEffectServices": "error",
+          "layerMergeAllWithDependencies": "error",
+          "lazyPromiseInEffectSync": "error",
+          "multipleEffectProvide": "error",
+          "obsoleteMatchImport": "error",
+          "obsoleteSchemaImport": "error",
+          "promiseInEffectSuccess": "error",
+          "scopeInLayerEffect": "error",
+          "runEffectInsideEffect": "error",
+          "extendsNativeError": "error",
+          "catchUnfailableEffect": "error",
+          "unstableApiUsage": "off",
+          "globalFetchInEffect": "error",
+          "globalDateInEffect": "error",
+          "globalConsoleInEffect": "error",
+          "globalTimersInEffect": "error",
+          "globalRandomInEffect": "error",
+          "cryptoRandomUUIDInEffect": "error",
+          "processEnv": "error",
+          "processEnvInEffect": "error",
+          "nodeBuiltinImport": "error"
+        },
+        "overrides": [
+          {
+            "include": ["test/**/*", "**/*.test.ts", "vitest.config.ts"],
+            "options": {
+              "diagnosticSeverity": {
+                "globalTimers": "off",
+                "globalTimersInEffect": "off",
+                "globalDate": "off",
+                "globalDateInEffect": "off",
+                "processEnv": "off",
+                "processEnvInEffect": "off",
+                "nodeBuiltinImport": "off"
+              }
+            }
+          },
+          {
+            "include": ["scripts/**/*", "oxlint.config.ts", "oxfmt.config.ts", "tools/**/*"],
+            "options": {
+              "diagnosticSeverity": {
+                "globalConsole": "off",
+                "globalConsoleInEffect": "off",
+                "globalDate": "off",
+                "nodeBuiltinImport": "off",
+                "processEnv": "off"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.ts", "*.config.ts"],
+  "exclude": ["node_modules", "dist", "tools/oxlint/anti-slop/**"]
+}
