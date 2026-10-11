@@ -81,6 +81,24 @@ describe('inventory', () => {
     }).pipe(Effect.provide(TestLayer)),
   )
 
+  it.effect('a server disabled in Grok (grok mcp disable) is off even when it comes from the repository', () =>
+    Effect.gen(function* () {
+      const root = fixture({ '.mcp.json': REPO_MCP })
+      const home = fixture({ '.grok/config.toml': 'disabled_mcp_servers = [\n    "mytab",\n]\n' })
+      const d = yield* declared(root, { home, codexHome: join(home, '.codex') })
+      const items = resolve(d.entries, d.claudeAllow)
+      expect(find(items, 'Grok', 'mytab', 'repo')?.state).toBe('disabled')
+      expect(find(items, 'Grok', 'myplan', 'repo')?.state).toBe('active')
+      expect(find(items, 'Claude Code', 'mytab', 'repo')?.state).toBe('active')
+    }).pipe(Effect.provide(TestLayer)),
+  )
+
+  it('reads multi-line arrays such as Grok disabled_mcp_servers', () => {
+    const t = parseToml('disabled_mcp_servers = [\n    "cloudflare",\n    "mysi", # why\n]\n[ui]\nyolo = false\n')
+    expect(t.get('')?.['disabled_mcp_servers']).toEqual(['cloudflare', 'mysi'])
+    expect(t.get('ui')).toEqual({ yolo: false })
+  })
+
   it('reads the TOML harness configs use', () => {
     const t = parseToml(
       'top = 1\n[mcp_servers."a.b"]\nurl = "u" # comment\nenabled = false\n[compat.claude]\nmcps = false\n',

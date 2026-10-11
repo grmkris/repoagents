@@ -3,6 +3,7 @@
 
 export type TomlTables = ReadonlyMap<string, Readonly<Record<string, unknown>>>
 
+const ARRAY_START = /^[A-Za-z0-9_-]+\s*=\s*\[/u
 const KEY_PART = /"([^"]*)"|([^.\s"]+)/gu
 
 /** `mcp_servers."my.server"` → ['mcp_servers', 'my.server']. */
@@ -13,7 +14,7 @@ const value = (raw: string): unknown => {
   if (text === 'true' || text === 'false') return text === 'true'
   if (text.startsWith('"') || text.startsWith('[')) {
     try {
-      const parsed: unknown = JSON.parse(text)
+      const parsed: unknown = JSON.parse(text.replace(/,\s*\]$/u, ']'))
       return parsed
     } catch {
       return text
@@ -22,12 +23,41 @@ const value = (raw: string): unknown => {
   return text
 }
 
+/** Open brackets minus closed ones outside strings and comments (> 0 while an array is still open). */
+/** A line without its trailing ` # comment` (a `#` inside a string is kept). */
+const uncomment = (line: string): string => line.replace(/\s+#[^"]*$/u, '')
+
+const depth = (line: string): number => {
+  let d = 0
+  let quoted = false
+  for (const ch of uncomment(line)) {
+    if (ch === '"') quoted = !quoted
+    else if (!quoted && ch === '[') d += 1
+    else if (!quoted && ch === ']') d -= 1
+  }
+  return d
+}
+
+/** The trimmed line at `start`; a multi-line array (`disabled_mcp_servers = [` … `]`) is joined into one line.
+ *  Returns it with the index of the last physical line it used. */
+const logicalLine = (lines: readonly string[], start: number): readonly [string, number] => {
+  let line = (lines[start] ?? '').trim()
+  let i = start
+  while (ARRAY_START.test(line) && depth(line) > 0 && i + 1 < lines.length) {
+    i += 1
+    line += ` ${uncomment((lines[i] ?? '').trim())}`
+  }
+  return [line, i]
+}
+
 /** Tables by their dotted path joined with `\0` (`''` for the top level). */
 export const parseToml = (text: string): TomlTables => {
   const tables = new Map<string, Record<string, unknown>>([['', {}]])
   let current = ''
-  for (const raw of text.split('\n')) {
-    const line = raw.trim()
+  const lines = text.split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    const [line, last] = logicalLine(lines, i)
+    i = last
     const header = /^\[([^[\]]+)\]$/u.exec(line)
     if (header) {
       current = splitKey(header[1] ?? '').join('\0')

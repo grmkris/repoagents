@@ -193,19 +193,23 @@ const userMcp = (root: string, h: Homes, display: (abs: string) => string) =>
         ...when(compat('cursor'), [['Grok', 3, 'compat']]),
       ]),
     ]
-    const grokOff = table(grokUser)['disabled_mcp_servers']
-    const off = new Set(Array.isArray(grokOff) ? grokOff.map(String) : [])
-    return entries.map((e) => (e.harness === 'Grok' && off.has(e.name) ? { ...e, disabled: true } : e))
+    return entries
   })
+
+const grokDisabled = (config: TomlTables): ReadonlySet<string> => {
+  const names = table(config)['disabled_mcp_servers']
+  return new Set(Array.isArray(names) ? names.map(String) : [])
+}
 
 const mcpDeclared = (root: string, h: Homes, display: (abs: string) => string) =>
   Effect.gen(function* () {
+    const path = yield* Path.Path
     const repo = yield* repoMcp(root)
     if (h.home === '') return repo
     const user = yield* userMcp(root, h, display)
-    // Grok's disabled list applies to every source, the repository's included.
-    const grokOff = new Set(user.filter((e) => e.harness === 'Grok' && e.disabled === true).map((e) => e.name))
-    return [...repo.map((e) => (e.harness === 'Grok' && grokOff.has(e.name) ? { ...e, disabled: true } : e)), ...user]
+    // Grok's disabled list (`grok mcp disable`) applies to servers from every source, the repository's included.
+    const off = grokDisabled(yield* readToml(path.join(h.home, '.grok/config.toml')))
+    return [...repo, ...user].map((e) => (e.harness === 'Grok' && off.has(e.name) ? { ...e, disabled: true } : e))
   })
 
 const skillsDeclared = (root: string, h: Homes, display: (abs: string) => string) =>
